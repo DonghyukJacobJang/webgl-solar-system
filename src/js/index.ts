@@ -1,5 +1,4 @@
-import { AxisHelper, Clock, GridHelper, PerspectiveCamera } from 'three';
-import assets from './assets';
+import { AxisHelper, GridHelper, PerspectiveCamera, Raycaster, Vector2 } from 'three';
 import cameras from './cameras';
 import { DEV_HELPERS, DEV_STATS } from './constants';
 import * as flags from './flags';
@@ -10,17 +9,20 @@ import { setQuery } from './params';
 import renderer from './renderer';
 import scene from './scene';
 import { guiFlags } from './utils/gui';
-import AssetLoader from './utils/loading/asset-loader';
 import stats from './utils/stats';
 
 // Objects
-import Sphere from './objects/sphere/sphere';
+import Planets from './objects/planets/planets';
 
 class WebGLPrototype {
-  private clock: Clock;
+
+  public raycaster = new Raycaster();
+  public mouse = new Vector2();
+  public INTERSECTED;
+
   private renderStats: RenderStats;
   private controls: any;
-  private sphere: Sphere;
+  private planets: Planets;
 
   constructor() {
     // Renderer
@@ -54,9 +56,6 @@ class WebGLPrototype {
       main: new OrbitControls(cameras.main, renderer.domElement)
     };
 
-    // Clock
-    this.clock = new Clock(true);
-
     // Flags
     guiFlags
       .add(flags, 'debugCamera')
@@ -65,26 +64,24 @@ class WebGLPrototype {
       });
 
     // Objects
-    this.sphere = new Sphere();
-    scene.add(this.sphere.mesh);
+    this.planets = new Planets();
+    this.planets.planetMeshs.forEach(planet => {
+      scene.add(planet);
+    });
 
     // Listeners
     window.addEventListener('resize', this.onResize, false);
 
-    AssetLoader('default', assets)
-      .then(this.onAssetsLoaded)
-      .catch(this.onAssetsError);
+    document.addEventListener('mousemove', this.onDocumentMouseMove.bind(this), false);
 
     this.update();
   }
 
-  private onAssetsLoaded = (value: any) => {
-    console.log('assets loaded', value);
-  };
-
-  private onAssetsError = (error: any) => {
-    console.warn(error);
-  };
+  public onDocumentMouseMove(event): void {
+    event.preventDefault();
+    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    this.mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+  }
 
   private onResize = () => {
     cameras.dev.aspect = window.innerWidth / window.innerHeight;
@@ -125,9 +122,31 @@ class WebGLPrototype {
     this.controls.main.update();
 
     // Objects
-    const delta = this.clock.getDelta();
+    const time = Date.now();
 
-    this.sphere.update(delta);
+    this.planets.update(time);
+
+    this.raycaster.setFromCamera(this.mouse, cameras.main);
+
+    const intersects = this.raycaster.intersectObjects(scene.children);
+
+    if (intersects.length > 0) {
+      if (this.INTERSECTED !== intersects[0].object) {
+        if (this.INTERSECTED) {
+          this.INTERSECTED.material.emissive.setHex(this.INTERSECTED.currentHex);
+        }
+
+        this.INTERSECTED = intersects[0].object;
+        this.INTERSECTED.currentHex = this.INTERSECTED.material.emissive.getHex();
+        this.INTERSECTED.material.emissive.setHex(0xffff00);
+      }
+    } else {
+      if (this.INTERSECTED) {
+        this.INTERSECTED.material.emissive.setHex(this.INTERSECTED.currentHex);
+      }
+
+      this.INTERSECTED = null;
+    }
 
     if (flags.debugCamera) {
       this.render(cameras.dev, 0, 0, 1, 1);

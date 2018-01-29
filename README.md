@@ -1,4 +1,4 @@
-# WebGL Prototype
+# WebGL Solar System Prototype
 
 A small boilerplate for prototyping with WebGL.
 
@@ -14,10 +14,10 @@ A small boilerplate for prototyping with WebGL.
 
 **Tasks**
 
-* `yarn run start` Start the local server and watch for changes
-* `yarn run build` Build and minify
-* `yarn run lint` Lint your ts code
-* `yarn run three-examples` Convert three example files to es6 modules
+* `npm run start` Start the local server and watch for changes
+* `npm run build` Build and minify
+* `npm run lint` Lint your ts code
+* `npm run three-examples` Convert three example files to es6 modules
 
 **Flags**
 

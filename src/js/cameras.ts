@@ -6,7 +6,7 @@ const near = 0.1;
 const far = 100000;
 
 function zoom(camera: PerspectiveCamera, value: number = 1) {
-  camera.position.set(1 * value, 0.75 * value, 1 * value);
+  camera.position.set(1 * value, 10 * value, 13 * value);
   camera.lookAt(new Vector3());
 }
 
