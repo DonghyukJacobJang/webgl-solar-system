@@ -24,7 +24,7 @@ const lights = {
   spot: new SpotLight(controller.spot, 1)
 };
 
-lights.spot.position.set(100, 100, 100);
+lights.spot.position.set(30000, 30000, 30000);
 
 lights.spot.castShadow = true;
 lights.spot.shadow.mapSize.width = 2048;

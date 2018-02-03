@@ -1,4 +1,8 @@
-import { AxisHelper, GridHelper, PerspectiveCamera, Raycaster, Vector2 } from 'three';
+import { Expo, TweenLite } from 'gsap';
+import {
+  AdditiveBlending, AxisHelper, Color, FogExp2, Geometry, GridHelper, Math as ThreeMath, NormalBlending,
+  PerspectiveCamera, Points, PointsMaterial, Raycaster, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3
+} from 'three';
 import cameras from './cameras';
 import { DEV_HELPERS, DEV_STATS } from './constants';
 import * as flags from './flags';
@@ -23,8 +27,24 @@ class WebGLPrototype {
   private renderStats: RenderStats;
   private controls: any;
   private planets: Planets;
+  private sceneChilldren: any = [];
+  private targetLook = new Vector3();
+  private targetSun = new Vector3();
+  private isCameraAnimating = false;
+  private shouldLookAt = false;
 
   constructor() {
+
+    // setting foggy environment
+    scene.background = new Color(0x0D0014);
+    scene.fog = new FogExp2(0x0D0014, 0.0000325);
+
+    this.mouse.x = 100000;
+    this.mouse.y = 100000;
+    this.targetSun.x = 0;
+    this.targetSun.y = 0;
+    this.targetSun.z = 0;
+
     // Renderer
     document.body.appendChild(renderer.domElement);
 
@@ -56,6 +76,8 @@ class WebGLPrototype {
       main: new OrbitControls(cameras.main, renderer.domElement)
     };
 
+    this.controls.main.maxDistance = 75000;
+
     // Flags
     guiFlags
       .add(flags, 'debugCamera')
@@ -69,18 +91,93 @@ class WebGLPrototype {
       scene.add(planet);
     });
 
+    // need to flatten with a better way
+    scene.children.forEach(child => {
+      if ((child.type === 'Mesh' || 'Group') && child.children.length > 0 && child.children[0].type !== 'Sprite') {
+        child.children.forEach(cChild => {
+          this.sceneChilldren.push(cChild);
+        });
+      } else {
+        this.sceneChilldren.push(child);
+      }
+    });
+
+    // This will add a starfield to the background of a scene
+    const starsGeometry = new Geometry();
+
+    for (let i = 0; i < 20000; i++) {
+      const star = new Vector3();
+      star.x = ThreeMath.randFloatSpread(75000);
+      star.y = ThreeMath.randFloatSpread(75000);
+      star.z = ThreeMath.randFloatSpread(75000);
+
+      starsGeometry.vertices.push(star);
+    }
+
+    const starTexture = new TextureLoader().load("./assets/webgl/images/lensflare_alpha.png");
+    const starsMaterial = new PointsMaterial({
+      map: starTexture,
+      color: 0x888888,
+      transparent: true,
+      blending: AdditiveBlending
+    });
+
+    starsMaterial.size = 100;
+
+    const starField = new Points(starsGeometry, starsMaterial);
+
+    scene.add(starField);
+
+    // const spriteMap = new TextureLoader().load("./assets/webgl/images/cloud.jpg");
+    // const spriteMaterial = new SpriteMaterial({
+    //   map: spriteMap,
+    //   color: 0xffffff,
+    //   blending: AdditiveBlending
+    // });
+    // spriteMaterial.opacity = 0.1;
+    // const sprite = new Sprite(spriteMaterial);
+    // sprite.scale.set(200000, 200000, 1);
+
+    // scene.add(sprite);
+
     // Listeners
     window.addEventListener('resize', this.onResize, false);
-
-    document.addEventListener('mousemove', this.onDocumentMouseMove.bind(this), false);
+    window.addEventListener('mousemove', this.handdleMouseMove.bind(this), false);
+    window.addEventListener('keyup', this.handdleKeyUp.bind(this), false);
+    window.addEventListener('click', this.handleClick.bind(this), false);
 
     this.update();
   }
 
-  public onDocumentMouseMove(event): void {
-    event.preventDefault();
-    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    this.mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+  public handdleMouseMove(ev): void {
+    ev.preventDefault();
+    this.mouse.x = (ev.clientX / window.innerWidth) * 2 - 1;
+    this.mouse.y = - (ev.clientY / window.innerHeight) * 2 + 1;
+  }
+
+  public handdleKeyUp(ev): void {
+    ev.preventDefault();
+    this.shouldLookAt = false;
+
+    // detect ESC key
+    if (ev.keyCode === 'Escape' || ev.keyCode === 27) {
+      // reset camera view
+      cameras.main.lookAt(this.targetSun);
+    }
+  }
+
+  public handleClick(ev): void {
+    ev.preventDefault();
+    if (this.INTERSECTED) {
+      console.log(this.INTERSECTED);
+
+      this.shouldLookAt = true;
+      this.targetLook = (this.INTERSECTED as any).parent.type === 'Group'
+        ? (this.INTERSECTED as any).parent.position
+        : this.INTERSECTED.position;
+
+      this.animateCamera(this.INTERSECTED);
+    }
   }
 
   private onResize = () => {
@@ -92,6 +189,52 @@ class WebGLPrototype {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
   };
+
+  private animateCamera(_target: any): void {
+
+    /*
+    // backup original rotation
+    var startRotation = new THREE.Euler().copy( camera.rotation );
+
+    // final rotation (with lookAt)
+    camera.lookAt( object.position );
+    var endRotation = new THREE.Euler().copy( camera.rotation );
+
+    // revert to original rotation
+    camera.rotation.copy( startRotation );
+
+    // Tween
+    new TWEEN.Tween( camera ).to( { rotation: endRotation }, 600 ).start();
+     */
+    if (this.isCameraAnimating) { return; }
+
+    this.isCameraAnimating = true;
+
+    const targetRadius = _target.radius;
+    let targetPosition = new Vector3();
+    if (_target._isBelongToGroup) {
+      targetPosition = _target._planetPosition;
+      console.log(targetPosition);
+    } else {
+      targetPosition = _target.position;
+    }
+
+    TweenLite.to(cameras.main.position, 1.4, {
+      x: targetPosition.x,
+      y: targetPosition.y,
+      z: targetPosition.z - targetRadius * 2,
+      onComplete: ()=> {
+        this.isCameraAnimating = false;
+      }
+    });
+  }
+
+  private animateOpacity(_target: any, _opacity: number): void {
+    TweenLite.to(_target, 0.4, {
+      opacity: _opacity,
+      ease: Expo.easeOut
+    });
+  }
 
   private render(
     camera: PerspectiveCamera,
@@ -118,8 +261,8 @@ class WebGLPrototype {
       stats.begin();
     }
 
-    this.controls.dev.update();
-    this.controls.main.update();
+    // this.controls.dev.update();
+    // this.controls.main.update();
 
     // Objects
     const time = Date.now();
@@ -128,24 +271,41 @@ class WebGLPrototype {
 
     this.raycaster.setFromCamera(this.mouse, cameras.main);
 
-    const intersects = this.raycaster.intersectObjects(scene.children);
+    const intersects = this.raycaster.intersectObjects(this.sceneChilldren);
 
     if (intersects.length > 0) {
       if (this.INTERSECTED !== intersects[0].object) {
-        if (this.INTERSECTED) {
-          this.INTERSECTED.material.emissive.setHex(this.INTERSECTED.currentHex);
+        if (this.INTERSECTED && this.INTERSECTED.children[0] && this.INTERSECTED.children[0].type === 'Sprite') {
+          // this.INTERSECTED.material.emissive.setHex(this.INTERSECTED.currentHex);
+          // this.INTERSECTED.children[0].visible = false;
+          // this.INTERSECTED.children[0].material.opacity = 0;
+          this.animateOpacity(this.INTERSECTED.children[0].material, 0);
         }
 
+
         this.INTERSECTED = intersects[0].object;
-        this.INTERSECTED.currentHex = this.INTERSECTED.material.emissive.getHex();
-        this.INTERSECTED.material.emissive.setHex(0xffff00);
+
+        if (this.INTERSECTED.children[0] && this.INTERSECTED.children[0].type === 'Sprite') {
+          // this.INTERSECTED.children[0].visible = true;
+          // this.INTERSECTED.children[0].material.opacity = 1;
+          this.animateOpacity(this.INTERSECTED.children[0].material, 1);
+        }
+        // this.INTERSECTED.currentHex = this.INTERSECTED.material.emissive.getHex();
+        // this.INTERSECTED.material.emissive.setHex(0xffffff);
       }
     } else {
-      if (this.INTERSECTED) {
-        this.INTERSECTED.material.emissive.setHex(this.INTERSECTED.currentHex);
+      if (this.INTERSECTED && this.INTERSECTED.children[0]) {
+        // this.INTERSECTED.children[0].visible = false;
+        // this.INTERSECTED.children[0].material.opacity = 0;
+        this.animateOpacity(this.INTERSECTED.children[0].material, 0);
+        // this.INTERSECTED.material.emissive.setHex(this.INTERSECTED.currentHex);
       }
 
       this.INTERSECTED = null;
+    }
+
+    if (this.targetLook && this.shouldLookAt) {
+      cameras.main.lookAt(this.targetLook);
     }
 
     if (flags.debugCamera) {
