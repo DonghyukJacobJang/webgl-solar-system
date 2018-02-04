@@ -1,8 +1,9 @@
 import { Expo, TweenLite } from 'gsap';
 import {
-  AdditiveBlending, AxisHelper, Color, FogExp2, Geometry, GridHelper, Math as ThreeMath, NormalBlending,
-  PerspectiveCamera, Points, PointsMaterial, Raycaster, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3
+  AdditiveBlending, AxisHelper, BufferGeometry, Color, Float32BufferAttribute, FogExp2, GridHelper,
+  PerspectiveCamera, Points, Raycaster, ShaderMaterial, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3
 } from 'three';
+
 import cameras from './cameras';
 import { DEV_HELPERS, DEV_STATS } from './constants';
 import * as flags from './flags';
@@ -103,42 +104,51 @@ class WebGLPrototype {
     });
 
     // This will add a starfield to the background of a scene
-    const starsGeometry = new Geometry();
-
-    for (let i = 0; i < 20000; i++) {
-      const star = new Vector3();
-      star.x = ThreeMath.randFloatSpread(75000);
-      star.y = ThreeMath.randFloatSpread(75000);
-      star.z = ThreeMath.randFloatSpread(75000);
-
-      starsGeometry.vertices.push(star);
-    }
-
-    const starTexture = new TextureLoader().load("./assets/webgl/images/lensflare_alpha.png");
-    const starsMaterial = new PointsMaterial({
-      map: starTexture,
-      color: 0x888888,
+    const uniforms = {
+      texture: { value: new TextureLoader().load("./assets/webgl/images/lensflare_alpha.png") }
+    };;
+    const shaderMaterial = new ShaderMaterial({
+      uniforms: uniforms,
+      vertexShader: document.getElementById('vertexshader').textContent,
+      fragmentShader: document.getElementById('fragmentshader').textContent,
+      blending: AdditiveBlending,
+      depthTest: false,
       transparent: true,
-      blending: AdditiveBlending
+      vertexColors: true
     });
 
-    starsMaterial.size = 100;
+    const particles = 25000;
+    const radius = 10000;
+    const geometry = new BufferGeometry();
+    const positions: any = [];
+    const colors: any = [];
+    const sizes: any = [];
+    const color = new Color();
+    for (let i = 0; i < particles; i++) {
+      positions.push((Math.random() * 2 - 1) * radius);
+      positions.push((Math.random() * 2 - 1) * radius);
+      positions.push((Math.random() * 2 - 1) * radius);
+      color.setHSL(1.0, (Math.random() * 0.5 - 0.5), 0.5);
+      colors.push(color.r, color.g, color.b);
+      sizes.push(100);
+    }
+    geometry.addAttribute('position', new Float32BufferAttribute(positions, 3));
+    geometry.addAttribute('color', new Float32BufferAttribute(colors, 3));
+    geometry.addAttribute('size', new Float32BufferAttribute(sizes, 1).setDynamic(true));
+    const particleSystem = new Points(geometry, shaderMaterial);
+    scene.add(particleSystem);
 
-    const starField = new Points(starsGeometry, starsMaterial);
+    const spriteMap = new TextureLoader().load("./assets/webgl/images/cloud.jpg");
+    const spriteMaterial = new SpriteMaterial({
+      map: spriteMap,
+      color: 0xffffff,
+      blending: AdditiveBlending
+    });
+    spriteMaterial.opacity = 0.1;
+    const sprite = new Sprite(spriteMaterial);
+    sprite.scale.set(200000, 200000, 1);
 
-    scene.add(starField);
-
-    // const spriteMap = new TextureLoader().load("./assets/webgl/images/cloud.jpg");
-    // const spriteMaterial = new SpriteMaterial({
-    //   map: spriteMap,
-    //   color: 0xffffff,
-    //   blending: AdditiveBlending
-    // });
-    // spriteMaterial.opacity = 0.1;
-    // const sprite = new Sprite(spriteMaterial);
-    // sprite.scale.set(200000, 200000, 1);
-
-    // scene.add(sprite);
+    scene.add(sprite);
 
     // Listeners
     window.addEventListener('resize', this.onResize, false);

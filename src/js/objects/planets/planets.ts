@@ -3,7 +3,6 @@ import {
   Sprite, SpriteMaterial, TextureLoader, TorusGeometry, Vector3
 } from 'three';
 
-import * as THREE from 'three';
 import AssetLoader from '../../utils/loading/asset-loader';
 
 import assets from './assets';
