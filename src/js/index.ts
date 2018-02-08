@@ -1,14 +1,15 @@
 import { Expo, TweenLite } from 'gsap';
 import {
-  AdditiveBlending, AxisHelper, BufferGeometry, Color, Float32BufferAttribute, FogExp2, GridHelper,
-  PerspectiveCamera, Points, Raycaster, ShaderMaterial, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3
+  AdditiveBlending, AxisHelper, Color, FogExp2, GridHelper,
+  PerspectiveCamera, Raycaster, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3
 } from 'three';
 
-import cameras from './cameras';
 import { DEV_HELPERS, DEV_STATS } from './constants';
 import * as flags from './flags';
 import OrbitControls from './lib/three/examples/OrbitControls';
 import RenderStats from './lib/three/render-stats';
+
+import cameras from './cameras';
 import lights from './lights';
 import { setQuery } from './params';
 import renderer from './renderer';
@@ -18,33 +19,29 @@ import stats from './utils/stats';
 
 // Objects
 import Planets from './objects/planets/planets';
+import Stars from './objects/stars/stars';
 
 class WebGLPrototype {
 
   public raycaster = new Raycaster();
-  public mouse = new Vector2();
+  public mouse = new Vector2(100000, 100000);
   public INTERSECTED;
 
   private renderStats: RenderStats;
   private controls: any;
-  private planets: Planets;
-  private sceneChilldren: any = [];
   private targetLook = new Vector3();
-  private targetSun = new Vector3();
+  private targetSun = new Vector3(0, 0, 0);
   private isCameraAnimating = false;
   private shouldLookAt = false;
 
-  constructor() {
+  private planets: Planets;
+  private stars: Stars;
+  private sceneChilldren: any = [];
 
+  constructor() {
     // setting foggy environment
     scene.background = new Color(0x0D0014);
-    scene.fog = new FogExp2(0x0D0014, 0.0000325);
-
-    this.mouse.x = 100000;
-    this.mouse.y = 100000;
-    this.targetSun.x = 0;
-    this.targetSun.y = 0;
-    this.targetSun.z = 0;
+    scene.fog = new FogExp2(0x0D0014, 0.0000225);
 
     // Renderer
     document.body.appendChild(renderer.domElement);
@@ -76,7 +73,6 @@ class WebGLPrototype {
       dev: new OrbitControls(cameras.dev, renderer.domElement),
       main: new OrbitControls(cameras.main, renderer.domElement)
     };
-
     this.controls.main.maxDistance = 75000;
 
     // Flags
@@ -104,39 +100,8 @@ class WebGLPrototype {
     });
 
     // This will add a starfield to the background of a scene
-    const uniforms = {
-      texture: { value: new TextureLoader().load("./assets/webgl/images/lensflare_alpha.png") }
-    };;
-    const shaderMaterial = new ShaderMaterial({
-      uniforms: uniforms,
-      vertexShader: document.getElementById('vertexshader').textContent,
-      fragmentShader: document.getElementById('fragmentshader').textContent,
-      blending: AdditiveBlending,
-      depthTest: false,
-      transparent: true,
-      vertexColors: true
-    });
-
-    const particles = 25000;
-    const radius = 10000;
-    const geometry = new BufferGeometry();
-    const positions: any = [];
-    const colors: any = [];
-    const sizes: any = [];
-    const color = new Color();
-    for (let i = 0; i < particles; i++) {
-      positions.push((Math.random() * 2 - 1) * radius);
-      positions.push((Math.random() * 2 - 1) * radius);
-      positions.push((Math.random() * 2 - 1) * radius);
-      color.setHSL(1.0, (Math.random() * 0.5 - 0.5), 0.5);
-      colors.push(color.r, color.g, color.b);
-      sizes.push(100);
-    }
-    geometry.addAttribute('position', new Float32BufferAttribute(positions, 3));
-    geometry.addAttribute('color', new Float32BufferAttribute(colors, 3));
-    geometry.addAttribute('size', new Float32BufferAttribute(sizes, 1).setDynamic(true));
-    const particleSystem = new Points(geometry, shaderMaterial);
-    scene.add(particleSystem);
+    this.stars = new Stars();
+    scene.add(this.stars.points);
 
     const spriteMap = new TextureLoader().load("./assets/webgl/images/cloud.jpg");
     const spriteMaterial = new SpriteMaterial({
@@ -148,7 +113,7 @@ class WebGLPrototype {
     const sprite = new Sprite(spriteMaterial);
     sprite.scale.set(200000, 200000, 1);
 
-    scene.add(sprite);
+    // scene.add(sprite);
 
     // Listeners
     window.addEventListener('resize', this.onResize, false);
@@ -171,7 +136,7 @@ class WebGLPrototype {
 
     // detect ESC key
     if (ev.keyCode === 'Escape' || ev.keyCode === 27) {
-      // reset camera view
+      // reset camera view at (0, 0, 0)
       cameras.main.lookAt(this.targetSun);
     }
   }
@@ -278,6 +243,7 @@ class WebGLPrototype {
     const time = Date.now();
 
     this.planets.update(time);
+    this.stars.update(time);
 
     this.raycaster.setFromCamera(this.mouse, cameras.main);
 
@@ -286,29 +252,18 @@ class WebGLPrototype {
     if (intersects.length > 0) {
       if (this.INTERSECTED !== intersects[0].object) {
         if (this.INTERSECTED && this.INTERSECTED.children[0] && this.INTERSECTED.children[0].type === 'Sprite') {
-          // this.INTERSECTED.material.emissive.setHex(this.INTERSECTED.currentHex);
-          // this.INTERSECTED.children[0].visible = false;
-          // this.INTERSECTED.children[0].material.opacity = 0;
           this.animateOpacity(this.INTERSECTED.children[0].material, 0);
         }
-
 
         this.INTERSECTED = intersects[0].object;
 
         if (this.INTERSECTED.children[0] && this.INTERSECTED.children[0].type === 'Sprite') {
-          // this.INTERSECTED.children[0].visible = true;
-          // this.INTERSECTED.children[0].material.opacity = 1;
           this.animateOpacity(this.INTERSECTED.children[0].material, 1);
         }
-        // this.INTERSECTED.currentHex = this.INTERSECTED.material.emissive.getHex();
-        // this.INTERSECTED.material.emissive.setHex(0xffffff);
       }
     } else {
       if (this.INTERSECTED && this.INTERSECTED.children[0]) {
-        // this.INTERSECTED.children[0].visible = false;
-        // this.INTERSECTED.children[0].material.opacity = 0;
         this.animateOpacity(this.INTERSECTED.children[0].material, 0);
-        // this.INTERSECTED.material.emissive.setHex(this.INTERSECTED.currentHex);
       }
 
       this.INTERSECTED = null;

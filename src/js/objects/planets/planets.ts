@@ -16,7 +16,6 @@ export default class Planets {
   private textures;
 
   constructor() {
-
     // preload all assets
     AssetLoader('planets', assets)
       .then(this.onAssetsLoaded)
@@ -48,13 +47,12 @@ export default class Planets {
       planetMesh.distance = planetDistance;
       planetMesh.periodOfRevolution = planets[key].periodOfRevolution;
       planetMesh.periodOfRotation = planets[key].periodOfRotation;
-      const planetSpriteMaterial = new SpriteMaterial(
-        {
-          map: loader.load("./assets/webgl/images/glow.png"),
-          color: planets[key].color,
-          transparent: false,
-          blending: AdditiveBlending
-        });
+      const planetSpriteMaterial = new SpriteMaterial({
+        map: loader.load("./assets/webgl/images/glow.png"),
+        color: planets[key].color,
+        transparent: false,
+        blending: AdditiveBlending
+      });
       const planetSprite = new Sprite(planetSpriteMaterial);
       planetSprite.material.opacity = 0;
       planetSprite.scale.set(planetRadius * 4, planetRadius * 4, 1.0);
@@ -87,13 +85,12 @@ export default class Planets {
         moonMesh.periodOfRotation = moonData.periodOfRotation;
         moonMesh._planetPosition = new Vector3();
         moonMesh._isBelongToGroup = true;
-        const moonSpriteMaterial = new SpriteMaterial(
-          {
-            map: loader.load("./assets/webgl/images/glow.png"),
-            color: planets[key].moons[0].color,
-            transparent: false,
-            blending: AdditiveBlending
-          });
+        const moonSpriteMaterial = new SpriteMaterial({
+          map: loader.load("./assets/webgl/images/glow.png"),
+          color: planets[key].moons[0].color,
+          transparent: false,
+          blending: AdditiveBlending
+        });
         const moonSprite = new Sprite(moonSpriteMaterial);
         moonSprite.material.opacity = 0;
         moonSprite.scale.set(moonRadius * 4, moonRadius * 4, 1.0);
