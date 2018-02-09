@@ -1,7 +1,6 @@
 import { Expo, TweenLite } from 'gsap';
 import {
-  AdditiveBlending, AxisHelper, Color, FogExp2, GridHelper,
-  PerspectiveCamera, Raycaster, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3
+  AxisHelper, Color, FogExp2, GridHelper, PerspectiveCamera, Raycaster, Vector2, Vector3
 } from 'three';
 
 import { DEV_HELPERS, DEV_STATS } from './constants';
@@ -19,24 +18,27 @@ import stats from './utils/stats';
 
 // Objects
 import Planets from './objects/planets/planets';
+import StarField from './objects/starfield/starfield';
 import Stars from './objects/stars/stars';
 
 class WebGLPrototype {
 
-  public raycaster = new Raycaster();
-  public mouse = new Vector2(100000, 100000);
-  public INTERSECTED;
+  private INTERSECTED;
+  private INTERSECTEDSPRITE;
+  private TARGETOBJECTS: any = [];
+  private TARGETSUN = new Vector3(0, 0, 0);
 
-  private renderStats: RenderStats;
-  private controls: any;
-  private targetLook = new Vector3();
-  private targetSun = new Vector3(0, 0, 0);
+  private isClosureLook = false;
   private isCameraAnimating = false;
-  private shouldLookAt = false;
+  private controls: any;
+  private mouse = new Vector2(100000, 100000);
+  private raycaster = new Raycaster();
+  private renderStats: RenderStats;
+  private targetLook = new Vector3();
 
   private planets: Planets;
+  private starField: StarField;
   private stars: Stars;
-  private sceneChilldren: any = [];
 
   constructor() {
     // setting foggy environment
@@ -82,38 +84,34 @@ class WebGLPrototype {
         setQuery('cameraDebug', val);
       });
 
-    // Objects
+    // add planet Objects
     this.planets = new Planets();
-    this.planets.planetMeshs.forEach(planet => {
+    this.planets.planetMeshes.forEach(planet => {
       scene.add(planet);
     });
 
     // need to flatten with a better way
     scene.children.forEach(child => {
-      if ((child.type === 'Mesh' || 'Group') && child.children.length > 0 && child.children[0].type !== 'Sprite') {
-        child.children.forEach(cChild => {
-          this.sceneChilldren.push(cChild);
-        });
-      } else {
-        this.sceneChilldren.push(child);
+      if (child.type === 'Mesh') {
+        if (child.children.length > 1) {
+          child.children.forEach(cChild => {
+            if (cChild.name === 'moon') {
+              this.TARGETOBJECTS.push(cChild);
+            }
+          });
+        }
+
+        this.TARGETOBJECTS.push(child);
       }
     });
 
-    // This will add a starfield to the background of a scene
+    // add stars
     this.stars = new Stars();
     scene.add(this.stars.points);
 
-    const spriteMap = new TextureLoader().load("./assets/webgl/images/cloud.jpg");
-    const spriteMaterial = new SpriteMaterial({
-      map: spriteMap,
-      color: 0xffffff,
-      blending: AdditiveBlending
-    });
-    spriteMaterial.opacity = 0.1;
-    const sprite = new Sprite(spriteMaterial);
-    sprite.scale.set(200000, 200000, 1);
-
-    // scene.add(sprite);
+    // add starfield
+    this.starField = new StarField();
+    scene.add(this.starField.sprite);
 
     // Listeners
     window.addEventListener('resize', this.onResize, false);
@@ -132,26 +130,29 @@ class WebGLPrototype {
 
   public handdleKeyUp(ev): void {
     ev.preventDefault();
-    this.shouldLookAt = false;
 
-    // detect ESC key
     if (ev.keyCode === 'Escape' || ev.keyCode === 27) {
       // reset camera view at (0, 0, 0)
-      cameras.main.lookAt(this.targetSun);
+      cameras.main.lookAt(this.TARGETSUN);
+      this.isClosureLook = false;
     }
   }
 
   public handleClick(ev): void {
     ev.preventDefault();
     if (this.INTERSECTED) {
-      console.log(this.INTERSECTED);
+      this.isClosureLook = true;
+      this.targetLook = this.INTERSECTED.position;
+      console.log(this.targetLook);
 
-      this.shouldLookAt = true;
-      this.targetLook = (this.INTERSECTED as any).parent.type === 'Group'
-        ? (this.INTERSECTED as any).parent.position
-        : this.INTERSECTED.position;
+      if (this.INTERSECTED.name === 'moon') {
+        this.targetLook.x += this.INTERSECTED.parent.position.x;
+        this.targetLook.y += this.INTERSECTED.parent.position.y;
+        this.targetLook.z += this.INTERSECTED.parent.position.z;
+        console.log(this.targetLook);
+      }
 
-      this.animateCamera(this.INTERSECTED);
+      this.animateCamera();
     }
   }
 
@@ -165,8 +166,7 @@ class WebGLPrototype {
     renderer.setSize(window.innerWidth, window.innerHeight);
   };
 
-  private animateCamera(_target: any): void {
-
+  private animateCamera(): void {
     /*
     // backup original rotation
     var startRotation = new THREE.Euler().copy( camera.rotation );
@@ -185,13 +185,12 @@ class WebGLPrototype {
 
     this.isCameraAnimating = true;
 
-    const targetRadius = _target.radius;
-    let targetPosition = new Vector3();
-    if (_target._isBelongToGroup) {
-      targetPosition = _target._planetPosition;
-      console.log(targetPosition);
-    } else {
-      targetPosition = _target.position;
+    const targetRadius = this.INTERSECTED.radius;
+    const targetPosition = this.INTERSECTED.position;
+    if (this.INTERSECTED.name === 'moon') {
+      targetPosition.x += this.INTERSECTED.parent.position.x;
+      targetPosition.y += this.INTERSECTED.parent.position.y;
+      targetPosition.z += this.INTERSECTED.parent.position.z;
     }
 
     TweenLite.to(cameras.main.position, 1.4, {
@@ -241,35 +240,36 @@ class WebGLPrototype {
 
     // Objects
     const time = Date.now();
-
     this.planets.update(time);
     this.stars.update(time);
 
     this.raycaster.setFromCamera(this.mouse, cameras.main);
 
-    const intersects = this.raycaster.intersectObjects(this.sceneChilldren);
+    const intersects = this.raycaster.intersectObjects(this.TARGETOBJECTS);
 
+    // detect objects in the scene
     if (intersects.length > 0) {
       if (this.INTERSECTED !== intersects[0].object) {
-        if (this.INTERSECTED && this.INTERSECTED.children[0] && this.INTERSECTED.children[0].type === 'Sprite') {
-          this.animateOpacity(this.INTERSECTED.children[0].material, 0);
+        if (this.INTERSECTED && this.INTERSECTEDSPRITE) {
+          this.animateOpacity(this.INTERSECTEDSPRITE.material, 0);
         }
 
         this.INTERSECTED = intersects[0].object;
+        this.INTERSECTEDSPRITE = this.INTERSECTED && this.INTERSECTED.children[this.INTERSECTED.children.length - 1];
 
-        if (this.INTERSECTED.children[0] && this.INTERSECTED.children[0].type === 'Sprite') {
-          this.animateOpacity(this.INTERSECTED.children[0].material, 1);
+        if (this.INTERSECTEDSPRITE && this.INTERSECTEDSPRITE.type === 'Sprite') {
+          this.animateOpacity(this.INTERSECTEDSPRITE.material, 1);
         }
       }
     } else {
-      if (this.INTERSECTED && this.INTERSECTED.children[0]) {
-        this.animateOpacity(this.INTERSECTED.children[0].material, 0);
+      if (this.INTERSECTED && this.INTERSECTEDSPRITE) {
+        this.animateOpacity(this.INTERSECTEDSPRITE.material, 0);
       }
 
       this.INTERSECTED = null;
     }
 
-    if (this.targetLook && this.shouldLookAt) {
+    if (this.targetLook && this.isClosureLook) {
       cameras.main.lookAt(this.targetLook);
     }
 
@@ -285,6 +285,7 @@ class WebGLPrototype {
       stats.end();
     }
   };
+
 }
 
 export default new WebGLPrototype();
