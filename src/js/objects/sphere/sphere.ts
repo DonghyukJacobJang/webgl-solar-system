@@ -3,7 +3,9 @@ import MaterialModifier from 'three-material-modifier';
 import Shader from './shader.glsl';
 
 export default class Sphere {
+
   public mesh: Mesh;
+
   private material: ShaderMaterial;
 
   constructor() {
@@ -36,4 +38,5 @@ export default class Sphere {
   public update(delta: number) {
     this.material.uniforms.uTime.value += delta;
   }
+  
 }

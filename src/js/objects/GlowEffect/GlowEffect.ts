@@ -5,6 +5,7 @@ import PlanetModel from '../../models/PlanetModel';
 const SCALEMODIFIER = 4;
 
 export default class GlowEffect {
+  
   public sprite: Sprite;
 
   constructor(data: BasicModel | PlanetModel) {

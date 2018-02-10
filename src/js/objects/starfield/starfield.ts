@@ -3,6 +3,7 @@ import {
 } from 'three';
 
 export default class StarField {
+  
   public sprite: Sprite;
 
   constructor() {

@@ -17,6 +17,7 @@ import { guiFlags } from './utils/gui';
 import stats from './utils/stats';
 
 // Objects
+import MilkyWay from './objects/MilkyWay/MilkyWay';
 import Planets from './objects/planets/planets';
 import StarField from './objects/starfield/starfield';
 import Stars from './objects/stars/stars';
@@ -36,14 +37,15 @@ class WebGLPrototype {
   private renderStats: RenderStats;
   private targetLook = new Vector3();
 
+  private milkyWay: MilkyWay;
   private planets: Planets;
-  private starField: StarField;
+  // private starField: StarField;
   private stars: Stars;
 
   constructor() {
     // setting foggy environment
-    scene.background = new Color(0x0D0014);
-    scene.fog = new FogExp2(0x0D0014, 0.0000225);
+    // scene.background = new Color(0x0D0014);
+    // scene.fog = new FogExp2(0x0D0014, 0.0000225);
 
     // Renderer
     document.body.appendChild(renderer.domElement);
@@ -106,12 +108,16 @@ class WebGLPrototype {
     });
 
     // add stars
-    this.stars = new Stars();
-    scene.add(this.stars.points);
+    // this.stars = new Stars();
+    // scene.add(this.stars.points);
 
     // add starfield
-    this.starField = new StarField();
-    scene.add(this.starField.sprite);
+    // this.starField = new StarField();
+    // scene.add(this.starField.sprite);
+
+    // add MilkyWay
+    this.milkyWay = new MilkyWay();
+    scene.add(this.milkyWay.mesh);
 
     // Listeners
     window.addEventListener('resize', this.onResize, false);
@@ -240,8 +246,8 @@ class WebGLPrototype {
 
     // Objects
     const time = Date.now();
-    this.planets.update(time);
-    this.stars.update(time);
+    if (this.planets) this.planets.update(time);
+    if (this.stars) this.stars.update(time);
 
     this.raycaster.setFromCamera(this.mouse, cameras.main);
 
