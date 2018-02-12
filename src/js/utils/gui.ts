@@ -86,11 +86,13 @@ if (!DEV_GUI) {
 
 export const gui = new Cls();
 export const guiFlags = gui.addFolder('flags');
+export const guiObjects = gui.addFolder('OBJECT3D');
 export const guiLights = gui.addFolder('lights');
 export { GUIWrapper };
 
 gui.open();
 guiFlags.open();
+guiObjects.open();
 // guiLights.open();
 
 if (!IS_DESKTOP) {

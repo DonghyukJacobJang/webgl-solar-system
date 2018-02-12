@@ -5,6 +5,9 @@ import {
 
 import * as Shader from './shader.glsl';
 
+import { DEV } from '../../constants';
+import { guiObjects } from '../../utils/gui';
+
 const PARTICLES = 25000;
 const RADIUS = 10000;
 
@@ -49,19 +52,24 @@ export default class Stars {
     geometry.addAttribute('size', new Float32BufferAttribute(sizes, 1).setDynamic(true));
 
     this.points = new Points(geometry, this.material);
+    this.points.visible = false;
+
+    if (DEV) {
+      guiObjects.add(this.points, 'visible');
+    }
   }
 
   public update(delta: number) {
     this.points.rotation.y = delta * 0.000001;
     this.points.rotation.z = delta * 0.000001;
 
-    const sizes = this.points.geometry.attributes.size.array;
+    const sizes = (this.points.geometry as any).attributes.size.array;
 
     for (let i = 0; i < PARTICLES; i++) {
       sizes[i] = 100 * (1 + Math.sin(0.1 * i + delta * 0.0005));
     }
 
-    this.points.geometry.attributes.size.needsUpdate = true;
+    (this.points.geometry as any).attributes.size.needsUpdate = true;
   }
 
 }

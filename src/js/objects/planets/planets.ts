@@ -17,6 +17,7 @@ const SUNRADIUS = 69600;
 export default class Planets {
 
   public planetMeshes: any = [];
+  public targetMeshes = Array<Mesh>();
 
   private textures;
 
@@ -58,10 +59,14 @@ export default class Planets {
       planetMesh.periodOfRevolution = planetData.periodOfRevolution;
       planetMesh.periodOfRotation = planetData.periodOfRotation;
 
+      this.targetMeshes.push(planetMesh);
+
       if (planetData.moons) {
         // initiate moons
         const moon = new Moon(planetData.moons[0], planetData);
         planetMesh.add(moon.mesh);
+
+        this.targetMeshes.push(moon.mesh);
       } else if (planetData.rings) {
         // initiate rings
         const ring = new Ring(planetData.rings[0], planetData);

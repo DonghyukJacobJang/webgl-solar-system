@@ -19,7 +19,6 @@ import stats from './utils/stats';
 // Objects
 import MilkyWay from './objects/MilkyWay/MilkyWay';
 import Planets from './objects/planets/planets';
-import StarField from './objects/starfield/starfield';
 import Stars from './objects/stars/stars';
 
 class WebGLPrototype {
@@ -34,12 +33,11 @@ class WebGLPrototype {
   private controls: any;
   private mouse = new Vector2(100000, 100000);
   private raycaster = new Raycaster();
-  private renderStats: RenderStats;
+  private renderStats;
   private targetLook = new Vector3();
 
   private milkyWay: MilkyWay;
   private planets: Planets;
-  // private starField: StarField;
   private stars: Stars;
 
   constructor() {
@@ -64,7 +62,7 @@ class WebGLPrototype {
 
     // Stats
     if (DEV_STATS) {
-      this.renderStats = new RenderStats();
+      this.renderStats = RenderStats();
       this.renderStats.domElement.style.position = 'absolute';
       this.renderStats.domElement.style.left = '0px';
       this.renderStats.domElement.style.top = '48px';
@@ -92,28 +90,12 @@ class WebGLPrototype {
       scene.add(planet);
     });
 
-    // need to flatten with a better way
-    scene.children.forEach(child => {
-      if (child.type === 'Mesh') {
-        if (child.children.length > 1) {
-          child.children.forEach(cChild => {
-            if (cChild.name === 'moon') {
-              this.TARGETOBJECTS.push(cChild);
-            }
-          });
-        }
-
-        this.TARGETOBJECTS.push(child);
-      }
-    });
+    // initiate target objects
+    this.TARGETOBJECTS = this.planets.targetMeshes;
 
     // add stars
-    // this.stars = new Stars();
-    // scene.add(this.stars.points);
-
-    // add starfield
-    // this.starField = new StarField();
-    // scene.add(this.starField.sprite);
+    this.stars = new Stars();
+    scene.add(this.stars.points);
 
     // add MilkyWay
     this.milkyWay = new MilkyWay();
@@ -247,7 +229,7 @@ class WebGLPrototype {
     // Objects
     const time = Date.now();
     if (this.planets) this.planets.update(time);
-    if (this.stars) this.stars.update(time);
+    if (this.stars && this.stars.points.visible) this.stars.update(time);
 
     this.raycaster.setFromCamera(this.mouse, cameras.main);
 
