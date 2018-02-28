@@ -6,7 +6,7 @@ export default class MilkyWay {
 
   constructor() {
     const loader = new TextureLoader();
-    const geometry = new SphereBufferGeometry(70000, 60, 40);
+    const geometry = new SphereBufferGeometry(90000, 60, 40);
     geometry.scale(-1, 1, 1);
 
     const material = new MeshBasicMaterial({

@@ -18,8 +18,9 @@ import stats from './utils/stats';
 
 // Objects
 import MilkyWay from './objects/MilkyWay/MilkyWay';
-import Planets from './objects/planets/planets';
-import Stars from './objects/stars/stars';
+import Planets from './objects/Planets/Planets';
+import PlanetTracks from './objects/PlanetTrack/PlanetTrack';
+import Stars from './objects/Stars/Stars';
 
 class WebGLPrototype {
 
@@ -38,6 +39,7 @@ class WebGLPrototype {
 
   private milkyWay: MilkyWay;
   private planets: Planets;
+  private planetTracks: PlanetTracks;
   private stars: Stars;
 
   constructor() {
@@ -92,6 +94,11 @@ class WebGLPrototype {
 
     // initiate target objects
     this.TARGETOBJECTS = this.planets.targetMeshes;
+
+    this.planetTracks = new PlanetTracks();
+    this.planetTracks.trackMeshes.forEach(track => {
+      scene.add(track);
+    });
 
     // add stars
     this.stars = new Stars();

@@ -1,5 +1,5 @@
 import {
-  Mesh, MeshPhongMaterial, SphereGeometry, TextureLoader
+  CircleGeometry, Line, LineBasicMaterial, Mesh, MeshPhongMaterial, SphereGeometry, TextureLoader
 } from 'three';
 
 import GlowEffect from '../GlowEffect/GlowEffect';

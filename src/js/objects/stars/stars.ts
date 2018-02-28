@@ -55,7 +55,8 @@ export default class Stars {
     this.points.visible = false;
 
     if (DEV) {
-      guiObjects.add(this.points, 'visible');
+      const gui = guiObjects.addFolder('stars');
+      gui.add(this.points, 'visible');
     }
   }
 
