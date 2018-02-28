@@ -10,6 +10,10 @@ export default class GlowEffect {
 
   public trackMeshes: any = [];
 
+  private trackGui = {
+    visible: false
+  };
+
   constructor() {
     Object.keys(planets).forEach((key) => {
       const { distance, color } = planets[key];
@@ -32,9 +36,11 @@ export default class GlowEffect {
 
     if (DEV) {
       const gui = guiObjects.addFolder('tracks');
-      this.trackMeshes.forEach( track => {
-        gui.add(track, 'visible');
-      });
+      gui.add(this.trackGui, 'visible').onChange((val: boolean) => {
+        this.trackMeshes.forEach( track => {
+          track.visible = val;
+        });
+      });;
     }
   }
 
