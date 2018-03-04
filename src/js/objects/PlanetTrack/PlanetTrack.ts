@@ -22,7 +22,7 @@ export default class GlowEffect {
       const planetDistance = distance / 60 * 0.001 + SUNRADIUS / 60;
 
       const lineMaterial = new LineBasicMaterial({ color });
-      const circleGeometry = new CircleGeometry(planetDistance, 64);
+      const circleGeometry = new CircleGeometry(planetDistance, 64, 0, 6.3);
 
       // Remove center vertex
       circleGeometry.vertices.shift();
